@@ -1,0 +1,13 @@
+langchain
+langchain-postgres
+pypdf
+pandas
+psycopg2-binary
+python-dotenv
+langchain-ollama
+langchain-community
+sentence-transformers
+streamlit
+einops
+numpy
+scikit-learn

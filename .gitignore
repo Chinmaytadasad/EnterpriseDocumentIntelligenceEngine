@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.venv/
+fde-env/
+
+# IDE and Editor configurations
+.vscode/
+.idea/
+.claude/
+.agents/
+
+# Docker overrides or secrets
+.env
+docker-compose.override.yml
+
+# Massive Datasets / Raw Files
+# We ignore the simulated_s3 directory so you don't accidentally push hundreds of megabytes of raw PDFs or CSVs to GitHub.
+simulated_s3/
+
+# Mac OS generated files
+.DS_Store
+
+# Internal Notes / Blueprints
+project_outline.md

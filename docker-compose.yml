@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  db-node:
+    image: ankane/pgvector:latest
+    container_name: fde_postgres_vector_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: fde_admin
+      POSTGRES_PASSWORD: enterprise_secure_pass
+      POSTGRES_DB: knowledge_base
+    volumes:
+      - postgres_storage_node:/var/lib/postgresql/data
+
+  web-app:
+    build: .
+    container_name: fde_streamlit_interface
+    ports:
+      - "8501:8501"
+    environment:
+      - DB_HOST=db-node
+      - DB_PORT=5432
+      - DB_USER=fde_admin
+      - DB_PASSWORD=enterprise_secure_pass
+      - DB_NAME=knowledge_base
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - db-node
+
+volumes:
+  postgres_storage_node:
