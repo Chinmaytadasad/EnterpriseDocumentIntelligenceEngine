@@ -58,15 +58,18 @@ def get_vector_store():
 def get_llm():
     """Initializes and returns the Ollama LLM Engine."""
     try:
-        return ChatOllama(
+        llm = ChatOllama(
             model="llama3.2",
             temperature=0.0,
             base_url=OLLAMA_HOST,
             num_ctx=4096
         )
+        llm.invoke("ping")  # force a real connection check now, not mid-chain later
+        return llm
     except Exception as e:
-        warnings.warn(f"Could not connect to local Ollama inference gateway: {e}")
-        return RunnablePassthrough()
+        raise RuntimeError(
+            f"Could not connect to local Ollama inference gateway at {OLLAMA_HOST}: {e}"
+        ) from e
 
 def get_rag_components():
     """Returns initialized vector_store, retriever, and the RAG execution chain."""
@@ -92,11 +95,18 @@ Helpful Answer with Explicit Source References:
     def format_docs(docs):
         return "\n\n---\n\n".join(doc.page_content for doc in docs)
 
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt_template
-        | llm_engine
-        | StrOutputParser()
+    from langchain_core.runnables import RunnableParallel
+
+    # Retrieve once, reuse the same docs for both the answer and the citations.
+    rag_chain = RunnableParallel(
+        {"context_docs": retriever, "question": RunnablePassthrough()}
+    ) | RunnablePassthrough.assign(
+        answer=(
+            {"context": lambda x: format_docs(x["context_docs"]), "question": lambda x: x["question"]}
+            | prompt_template
+            | llm_engine
+            | StrOutputParser()
+        )
     )
-    
+
     return vector_store, retriever, rag_chain

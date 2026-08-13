@@ -40,8 +40,9 @@ if user_query := str_ui.chat_input("Ask a question about your knowledge base..."
     with str_ui.chat_message("assistant"):
         with str_ui.spinner("Querying PGVector Container Tables..."):
             try:
-                matched_docs = retriever.invoke(user_query)
-                ai_response = rag_chain.invoke(user_query)
+                result = rag_chain.invoke(user_query)
+                matched_docs = result["context_docs"]
+                ai_response = result["answer"]
                 str_ui.markdown(ai_response)
                 
                 if matched_docs:
