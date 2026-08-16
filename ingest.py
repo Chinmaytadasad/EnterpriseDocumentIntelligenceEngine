@@ -150,6 +150,14 @@ if __name__ == "__main__":
             print(f"[*] Connecting to PGVector to insert {len(extracted_chunks)} chunks in batches...")
             try:
                 vector_store = get_vector_store()
+                print("[*] Clearing existing PGVector collection before ingest...")
+                try:
+                    vector_store.delete_collection()
+                    print("[✓] Existing PGVector collection cleared.")
+                except Exception as e:
+                    print(f"[!] Warning: no existing PGVector collection found or could not be cleared: {str(e)}")
+                vector_store = get_vector_store()
+                print("[*] PGVector collection reset complete; starting batch insert...")
                 batch_size = 200
                 total_batches = (len(extracted_chunks) + batch_size - 1) // batch_size
                 for i in range(0, len(extracted_chunks), batch_size):

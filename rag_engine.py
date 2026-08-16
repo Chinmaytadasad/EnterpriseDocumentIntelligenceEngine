@@ -1,10 +1,11 @@
 import os
+import re
 import time
 import warnings
 from langchain_postgres import PGVector
 from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 # Database connection credentials
@@ -75,13 +76,34 @@ def get_rag_components():
     """Returns initialized vector_store, retriever, and the RAG execution chain."""
     vector_store = get_vector_store()
     llm_engine = get_llm()
-    
+
+    def extract_ticket_id(question: str):
+        match = re.search(r"\b(?:ticket\s*(?:#|id)?\s*|ticket\s+id\s+)\(?(?P<ticket_id>\d+)\)?\b", question, flags=re.IGNORECASE)
+        if not match:
+            return None
+        try:
+            return int(match.group("ticket_id"))
+        except ValueError:
+            return None
+
+    def retrieve_context(query: str):
+        ticket_id = extract_ticket_id(query)
+        if ticket_id is not None:
+            exact_matches = vector_store.similarity_search(
+                query=query,
+                k=5,
+                filter={"ticket_id": ticket_id}
+            )
+            if exact_matches:
+                return exact_matches
+        return vector_store.similarity_search(query=query, k=3)
+
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
-    
+
     prompt_template = ChatPromptTemplate.from_template("""
-You are an expert enterprise systems engineer and financial analyst. 
-Answer the user's question accurately using ONLY the provided verified context fragments below. 
-If the answer cannot be found in the context, state clearly that the information is missing from the logs or files.
+You are an expert enterprise systems engineer and support analyst.
+Answer the user's question accurately using ONLY the provided verified context fragments below.
+If the answer cannot be found in the context, say that the information is missing from the ingested logs or files.
 
 Context:
 {context}
@@ -97,9 +119,8 @@ Helpful Answer with Explicit Source References:
 
     from langchain_core.runnables import RunnableParallel
 
-    # Retrieve once, reuse the same docs for both the answer and the citations.
     rag_chain = RunnableParallel(
-        {"context_docs": retriever, "question": RunnablePassthrough()}
+        {"context_docs": RunnableLambda(retrieve_context), "question": RunnablePassthrough()}
     ) | RunnablePassthrough.assign(
         answer=(
             {"context": lambda x: format_docs(x["context_docs"]), "question": lambda x: x["question"]}

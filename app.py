@@ -51,15 +51,20 @@ if user_query := str_ui.chat_input("Ask a question about your knowledge base..."
                             source_name = doc.metadata.get('source', 'Database Matrix Record')
                             chunk_id = doc.metadata.get('chunk_id', 'N/A')
                             doc_type = doc.metadata.get('type', 'document')
-                            
+                            ticket_id = doc.metadata.get('ticket_id')
+
                             citation = f"**Source [{i+1}] ({doc_type}):** `{os.path.basename(source_name)}` (Chunk {chunk_id})"
+                            if ticket_id not in (None, 'Unknown', 'N/A'):
+                                citation += f" (Ticket {ticket_id})"
                             if doc_type == 'csv':
                                 row_id = doc.metadata.get('row_id', 'N/A')
-                                citation += f" (Row {row_id})"
+                                if row_id not in (None, 'N/A'):
+                                    citation += f" (Row {row_id})"
                             elif doc_type == 'pdf':
                                 page_number = doc.metadata.get('page_number', 'N/A')
-                                citation += f" (Page {page_number})"
-                                
+                                if page_number not in (None, 'N/A'):
+                                    citation += f" (Page {page_number})"
+
                             str_ui.markdown(citation)
             except Exception as e:
                 str_ui.error(f"Execution Failure: {str(e)}")
